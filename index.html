@@ -1,13 +1,131 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ImmoDash</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .hidden { display: none; }
+  </style>
 </head>
 <body>
-  <h1>Bienvenue sur ImmoDash</h1>
-  <script src="script.js" defer></script>
+  <div id="login-screen" class="screen">
+    <h1>Bienvenue sur ImmoDash</h1>
+    <p>Veuillez vous identifier :</p>
+    <input type="text" id="prenom" placeholder="Prénom">
+    <input type="text" id="nom" placeholder="Nom">
+    <button onclick="login()">Accéder au Dashboard</button>
+  </div>
+
+  <div id="dashboard-screen" class="screen hidden">
+    <h2>Tableau de bord - <span id="agent-connecte"></span></h2>
+    <form id="formulaire">
+      <select id="etat">
+        <option>Offre</option>
+        <option>Promesse</option>
+        <option>Vente définitive</option>
+      </select>
+      <input type="text" id="mandat" placeholder="Numéro de mandat">
+      <input type="text" id="vendeur" placeholder="Nom du vendeur">
+      <input type="text" id="acquereur" placeholder="Nom de l'acquéreur">
+      <input type="text" id="adresse" placeholder="Adresse du bien">
+      <input type="number" id="prix" placeholder="Prix de vente TTC">
+      <input type="number" id="net" placeholder="Prix net vendeur">
+      <select id="agent-mandat"></select>
+      <select id="agent-vente"></select>
+      <button type="submit">Ajouter</button>
+    </form>
+
+    <table>
+      <thead>
+        <tr>
+          <th>État</th><th>Mandat</th><th>Vendeur</th><th>Acquéreur</th><th>Adresse</th>
+          <th>Prix TTC</th><th>Net Vendeur</th><th>Commission HT</th><th>Commission TTC</th>
+          <th>Agent Mandat</th><th>Agent Vente</th>
+        </tr>
+      </thead>
+      <tbody id="tableau"></tbody>
+    </table>
+  </div>
+
+  <script>
+    function login() {
+      const prenom = document.getElementById("prenom").value.trim();
+      const nom = document.getElementById("nom").value.trim();
+      if (!prenom || !nom) return alert("Veuillez entrer vos prénom et nom.");
+
+      const nomComplet = \`\${prenom} \${nom}\`;
+      localStorage.setItem("agent", nomComplet);
+      document.getElementById("agent-connecte").textContent = nomComplet;
+
+      // Remplir les menus déroulants
+      const agents = [nomComplet, "Alice Dupont", "Bob Martin", "Claire Leroy"];
+      ["agent-mandat", "agent-vente"].forEach(id => {
+        const select = document.getElementById(id);
+        select.innerHTML = "";
+        agents.forEach(agent => {
+          const option = document.createElement("option");
+          option.value = agent;
+          option.textContent = agent;
+          select.appendChild(option);
+        });
+      });
+
+      document.getElementById("login-screen").classList.add("hidden");
+      document.getElementById("dashboard-screen").classList.remove("hidden");
+      chargerDonnees();
+    }
+
+    document.getElementById("formulaire").addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      const etat = document.getElementById("etat").value;
+      const mandat = document.getElementById("mandat").value;
+      const vendeur = document.getElementById("vendeur").value;
+      const acquereur = document.getElementById("acquereur").value;
+      const adresse = document.getElementById("adresse").value;
+      const prix = parseFloat(document.getElementById("prix").value);
+      const net = parseFloat(document.getElementById("net").value);
+      const mandatAgent = document.getElementById("agent-mandat").value;
+      const venteAgent = document.getElementById("agent-vente").value;
+
+      const commissionTTC = prix - net;
+      const commissionHT = commissionTTC / 1.2;
+
+      const ligne = { etat, mandat, vendeur, acquereur, adresse, prix, net, commissionHT, commissionTTC, mandatAgent, venteAgent };
+      const donnees = JSON.parse(localStorage.getItem("transactions") || "[]");
+      donnees.push(ligne);
+      localStorage.setItem("transactions", JSON.stringify(donnees));
+      ajouterLigneTableau(ligne);
+      this.reset();
+    });
+
+    function ajouterLigneTableau(ligne) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>\${ligne.etat}</td><td>\${ligne.mandat}</td><td>\${ligne.vendeur}</td><td>\${ligne.acquereur}</td>
+        <td>\${ligne.adresse}</td><td>\${ligne.prix}</td><td>\${ligne.net}</td>
+        <td>\${ligne.commissionHT.toFixed(2)}</td><td>\${ligne.commissionTTC.toFixed(2)}</td>
+        <td>\${ligne.mandatAgent}</td><td>\${ligne.venteAgent}</td>
+      `;
+      document.getElementById("tableau").appendChild(tr);
+    }
+
+    function chargerDonnees() {
+      const donnees = JSON.parse(localStorage.getItem("transactions") || "[]");
+      donnees.forEach(ajouterLigneTableau);
+    }
+
+    window.onload = function() {
+      const agent = localStorage.getItem("agent");
+      if (agent) {
+        document.getElementById("agent-connecte").textContent = agent;
+        document.getElementById("login-screen").classList.add("hidden");
+        document.getElementById("dashboard-screen").classList.remove("hidden");
+        login();
+      }
+    }
+  </script>
 </body>
 </html>
